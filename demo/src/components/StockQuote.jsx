@@ -12,9 +12,17 @@ import WebViewer from "@pdftron/webviewer";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import Loader from "./Loader/Loader";
+import { useSelector } from "react-redux";
+import {
+  DeleteDoc,
+  getallDocs,
+  UpdateDoc,
+} from "../reduxToolkit/docslice/DocSlice";
+import { useDispatch } from "react-redux";
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 function StockQuote(props) {
+  const dispatch = useDispatch();
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [data, setData] = useState([]);
@@ -27,30 +35,24 @@ function StockQuote(props) {
   const [update, setUpdate] = useState(false);
   const viewerDiv = useRef();
 
-  const handelDel = async (el) => {
-    // Swal.fire({
-    //   title: "Are you sure?",
-    //   text: `${el.file.fileName} will be deleted!`,
-    //   icon: "warning",
-    //   showCancelButton: true,
-    //   confirmButtonColor: "#3085d6",
-    //   cancelButtonColor: "#d33",
-    //   confirmButtonText: "Yes, delete it!",
-    // }).then((result) => {
-    //   if (result.isConfirmed) {
-    await axios.delete(
-      `https://nodeappscitrine.herokuapp.com/api/doc/${el._id}`
-    );
-    await axios
-      .get("https://nodeappscitrine.herokuapp.com/api/doc")
-      .then((result) => {
-        setData(result.data.response);
-      });
-
-    //     Swal.fire("Deleted!", "Your file has been deleted.", "success");
-    //     // window.location.reload();
-    //   }
-    // });
+  const Documents = useSelector((state) => state.Doc.allDocuments);
+  const handelDel = (el) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: `${el?.file?.fileName} will be deleted!`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        dispatch(DeleteDoc(el._id, dispatch));
+        dispatch(getallDocs());
+        props.setPing(!props.ping);
+        Swal.fire("Deleted!", "Your file has been deleted.", "success");
+      }
+    });
   };
   const handleShow = (el) => {
     setUpdate(true);
@@ -69,39 +71,43 @@ function StockQuote(props) {
     setupdatebtn(true);
     setUpdateData({ ...updatedata, text: editor.getData() });
   };
-  const Update = async () => {
-    await axios
-      .put(
-        `https://nodeappscitrine.herokuapp.com/api/doc/${updatedata._id}`,
-        updatedata
-      )
-      .then((result) => {
-        Swal.fire({
-          position: "top-end",
-          icon: "success",
-          title: `${result.data.msg}`,
-          showConfirmButton: false,
-          timer: 1300,
-        });
-      });
-    await axios
-      .get("https://nodeappscitrine.herokuapp.com/api/doc")
-      .then((result) => {
-        setData(result.data.response);
-      });
+  const Update = () => {
+    dispatch(UpdateDoc(updatedata, dispatch));
+    dispatch(getallDocs());
+    // await axios
+    //   .put(
+    //     `https://nodeappscitrine.herokuapp.com/api/doc/${updatedata._id}`,
+    //     updatedata
+    //   )
+    //   .then((result) => {
+    //     Swal.fire({
+    //       position: "top-end",
+    //       icon: "success",
+    //       title: `${result.data.msg}`,
+    //       showConfirmButton: false,
+    //       timer: 1300,
+    //     });
+    //   });
+    // await axios
+    //   .get("https://nodeappscitrine.herokuapp.com/api/doc")
+    //   .then((result) => {
+    //     setData(result.data.response);
+    //   });
     setupdatebtn(false);
+    props.setPing(!props.ping);
   };
 
-  useEffect(() => {
-    async function getData() {
-      await axios
-        .get("https://nodeappscitrine.herokuapp.com/api/doc")
-        .then((result) => {
-          setData(result.data.response);
-        });
-    }
-    getData();
-  }, []);
+  // useEffect(() => {
+  //   dispatch(getallDocs());
+  //   // async function getData() {
+  //   //   await axios
+  //   //     .get("https://nodeappscitrine.herokuapp.com/api/doc")
+  //   //     .then((result) => {
+  //   //       setData(result.data.response);
+  //   //     });
+  //   // }
+  //   // getData();
+  // }, []);
 
   useEffect(() => {
     WebViewer(
@@ -116,10 +122,10 @@ function StockQuote(props) {
   }, [update]);
   return (
     <div className="fillData">
-      {data ? (
+      {Documents ? (
         <>
-          {data?.length != 0 ? (
-            data?.map((el) => (
+          {Documents?.length != 0 ? (
+            Documents?.map((el) => (
               <div className="fileCard">
                 {el.file.fileType === "application/pdf" && (
                   <div className="fileCardtop" onClick={() => handleShow(el)}>
